@@ -1,12 +1,10 @@
-from database.connection import get_connection
+from flask import Flask
+from routes.warsharll_routes import warshall_bp
 
-def main():
-    conn = get_connection()
-    if conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT TOP 1 * FROM NODO")
-        print(cursor.fetchone())
-        conn.close()
+def create_app():
+    app = Flask(__name__)
 
-if __name__ == "__main__":
-    main()
+    # Agregar rutas
+    app.register_blueprint(warshall_bp)
+
+    return app
