@@ -2,3 +2,8 @@ Flask
 pyodbc
 python-dotenv
 numpy
+
+networkx
+matplotlib
+requests
+flet
