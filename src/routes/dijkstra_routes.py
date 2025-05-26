@@ -20,6 +20,7 @@ def obtener_camino():
             "origen": camino[0] if camino else "",
             "destino": camino[-1] if camino else "",
             "camino": " -> ".join(camino),
+            "nodos": camino,
             "distancia_km": f"{distancia_redondeada} km"
         })
 
