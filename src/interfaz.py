@@ -5,18 +5,21 @@ from database.connection import get_connection
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import time
-start= 0
-destination= 0
+import os
+from services.dijkstra_service import obtener_nombres_nodos
+from pathlib import Path
+
+nombre_imagen = 0
 
 def main(page: ft.Page):
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-    page.title = "Proyect_Path"
+    page.title = "🧭 Proyect_Path 🧭"
     page.add(ft.Text("ProyectPath - Logística", size=30, weight=ft.FontWeight.BOLD))
     page.theme_mode = ft.ThemeMode.SYSTEM
     existe_camino = ft.Text("", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900)
     page.bgcolor = "#E9EDF0"
     page.controls.append(
+    
         ft.Row(
             controls=[
                 ft.Container(
@@ -69,11 +72,11 @@ def main(page: ft.Page):
         return options
 
     def dropdown_changed_origen(e):
-        e.control.color = ft.Colors.BLUE_900
+        page.graph_image.src = "grafo.png"
         page.update()
 
     def dropdown_changed_destino(e):
-        e.control.color = ft.Colors.BLUE_900
+        page.graph_image.src = "grafo.png"
         page.update()
 
     #Función que mostrará el resultado
@@ -83,16 +86,28 @@ def main(page: ft.Page):
         req = requests.get(url)
         json_devuelto = req.json()
         there_is_path = json_devuelto['camino']
+
         if there_is_path==1:
-            existe_camino.value = f"Si existe camino entre {origen.value} y {destino.value},\nLongitud de (Dijstra)\nNodos_del_camino_mas_corto(Dijstra),\nRuta..."
-            marcar_camino()
+            url = f"http://127.0.0.1:5000/api/dijkstra/camino?origen={origen.value[0:2].rstrip() }&destino={destino.value[0:2].rstrip()}"
+            req_dijkstra = requests.get(url)
+            json_devuelto_dijkstra = req_dijkstra.json()
+            existe_camino.value = f"Si existe camino entre 📌{origen.value} y 📌{destino.value},\nLongitud: 📏{json_devuelto_dijkstra['distancia_km']}\nCamino: 📈{json_devuelto_dijkstra['camino']}"
+            camino = json_devuelto_dijkstra['nodos']
+            listado_aristas = []
+            for i in range(len(camino) - 1):
+                listado_aristas.append((camino[i], camino[i + 1]))
+            grafo_ciudades(json_devuelto_dijkstra['camino'],listado_aristas)
+            
+            global nombre_imagen
+            if nombre_imagen != 0:
+                page.graph_image.src = f"grafo{nombre_imagen}.png"
             page.update()
+            
         else:
             existe_camino.value = f"No existe camino entre {origen.value} y {destino.value}"
             page.update()
     
     origen = ft.Dropdown(
-        
         border=ft.InputBorder.UNDERLINE,
         enable_filter=True,
         enable_search=True,
@@ -128,24 +143,12 @@ def main(page: ft.Page):
     page.graph_image = ft.Image(src="grafo.png", width=1762, height=1421, fit=ft.ImageFit.CONTAIN, border_radius=ft.border_radius.all(50),)
     page.scroll_vertical.controls.append(page.graph_image)
     page.add(page.scroll_vertical)
-
-    def marcar_camino():
-        nodos=['9', '8', '14', '10']
-        aristas=[('9','8'),('8','14'),('14','10')]
-        grafo_ciudades(nodos,aristas)
-        page.graph_image.src = f"grafo2.png"
-        page.update()
-
         
 
 def grafo_ciudades(nodos, listado_aristas):
     grafo_dirigido = get_info_arista_vertices()
-    #nodos = ['1', '2', '3', '4','5', '6', '7', '8','9', '10', '11', '12','13', '14', '15', '16','17', '18', '19', '20','21', '22', '23', '24','25', '26', '27', '28','29','30']
-    #grafo_dirigido.add_nodes_from(nodos)
-
     plt.figure(figsize=(20,20))
     pos = nx.spring_layout(grafo_dirigido, seed=42, k=5, iterations=100)
-    #pos = nx.spring_layout(grafo_dirigido)
  
     if(nodos == None):
         nx.draw(grafo_dirigido, pos, with_labels = True, node_color = 'skyblue', node_size = 1500, edge_color='gray', font_size=16)
@@ -154,18 +157,32 @@ def grafo_ciudades(nodos, listado_aristas):
         plt.tight_layout()
         plt.savefig("grafo.png", bbox_inches = 'tight')
     else:
-        colores = ['midnightblue' if i in nodos else 'gray' for i in grafo_dirigido.nodes()]
+        colores = ['skyblue' if i in nodos else 'lightgray' for i in grafo_dirigido.nodes()]
         nx.draw_networkx_nodes(grafo_dirigido, pos, node_color = colores, node_size = 800)
         
-        nx.draw_networkx_edges(grafo_dirigido, pos, edgelist=[e for e in grafo_dirigido.edges() if e not in listado_aristas],edge_color='gray',arrows=True, arrowsize=20)
+        nx.draw_networkx_edges(grafo_dirigido, pos, edgelist=[e for e in grafo_dirigido.edges() if e not in listado_aristas],edge_color='lightgray',arrows=True, arrowsize=20)
         nx.draw_networkx_edges(grafo_dirigido, pos, edgelist=listado_aristas, edge_color='green', arrows=True, arrowsize=30, connectionstyle='arc3,rad=0.1')
-        nx.draw_networkx_labels(grafo_dirigido, pos, font_size=15, font_color='white')
-        peso = nx.get_edge_attributes(grafo_dirigido, 'weight')
-        nx.draw_networkx_edge_labels(grafo_dirigido,pos, edge_labels=peso)
-        plt.tight_layout()
-        plt.savefig("grafo2.png", bbox_inches = 'tight')
+        
+        nx.draw_networkx_labels(grafo_dirigido, pos, font_size=15, font_color='midnightblue')
 
-    
+        peso = nx.get_edge_attributes(grafo_dirigido, 'weight')
+        
+        peso_relevante = {arista: peso for arista, peso in peso.items() if arista in listado_aristas}
+        peso_no_relevante = {arista: peso for arista, peso in peso.items() if arista not in listado_aristas}
+
+        nx.draw_networkx_edge_labels(grafo_dirigido, pos, edge_labels=peso_no_relevante, font_color="gray")
+        nx.draw_networkx_edge_labels(grafo_dirigido, pos, edge_labels=peso_relevante, font_color="red")
+        plt.tight_layout()
+
+        global nombre_imagen
+        if nombre_imagen != 0:
+            actual = Path(__file__).resolve().parent
+            root = actual.parent
+            os.remove(f"{root}/grafo{nombre_imagen}.png")
+
+        nombre_imagen +=1
+        plt.savefig(f"grafo{nombre_imagen}.png", bbox_inches = 'tight')
+
     plt.close()
 
 
@@ -174,15 +191,14 @@ def get_info_arista_vertices():
     cursor = conn.cursor()
     cursor.execute("SELECT origen, destino, costo FROM ARISTA")
     casilla = cursor.fetchall()
-
+    nombres_nodos = obtener_nombres_nodos()
     grafo = nx.DiGraph()
 
     for origen, destino, costo in casilla:
         if costo != None:
-            grafo.add_edge(str(origen),str(destino),weight = float(costo))
+            grafo.add_edge(str(nombres_nodos[origen]),str(nombres_nodos[destino]),weight = float(costo))
     cursor.close()
     conn.close()
-
     return grafo
 
     
