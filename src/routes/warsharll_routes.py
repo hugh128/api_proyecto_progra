@@ -13,6 +13,14 @@ def verificar_camino():
         if not (1 <= origen <= 30 and 1 <= destino <= 30):
             return jsonify({'error': 'Los nodos deben estar entre 1 y 30'}), 400
 
+        if (origen == destino):
+            return jsonify({
+                "origen": origen,
+                "destino": destino,
+                "camino": 0,
+                "matriz_c": []
+            })
+
         resultado = grafo.hay_camino(origen, destino)
         matriz_c = grafo.obtener_matriz_c()
 

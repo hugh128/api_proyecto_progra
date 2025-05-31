@@ -14,7 +14,7 @@ nombre_imagen = 0
 def main(page: ft.Page):
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     page.title = "🧭 Proyect_Path 🧭"
-    page.add(ft.Text("ProyectPath - Logística", size=30, weight=ft.FontWeight.BOLD))
+    page.add(ft.Text("Proyecto Grafos 🗺️", size=30, weight=ft.FontWeight.BOLD))
     page.theme_mode = ft.ThemeMode.SYSTEM
     existe_camino = ft.Text("", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900)
     page.bgcolor = "#E9EDF0"
